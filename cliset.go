@@ -20,10 +20,6 @@ func homeDir() string {
 
 // BuildConfigFromFlags checks envvar `IN_CLUSTER` or `KUBERNETES_SERVICE_HOST` and flags to create `*rest.Config`.
 func BuildConfigFromFlags() (*rest.Config, error) {
-	if (os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "") || os.Getenv("IN_CLUSTER") == "true" {
-		return rest.InClusterConfig()
-	}
-
 	var (
 		kubeconfig     *string
 		currentContext *string
@@ -35,14 +31,23 @@ func BuildConfigFromFlags() (*rest.Config, error) {
 	}
 	currentContext = flag.String("context", "", "kube context")
 	flag.Parse()
+	return BuildConfig(*kubeconfig, *currentContext)
+}
 
-	if *currentContext == "" {
-		return clientcmd.BuildConfigFromFlags("", *kubeconfig)
+// BuildConfig returns InClusterConfig or LocalConfig automatically.
+func BuildConfig(cfgPath, cfgContext string) (*rest.Config, error) {
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "" {
+		return rest.InClusterConfig()
 	}
+
+	if cfgContext == "" {
+		return clientcmd.BuildConfigFromFlags("", cfgPath)
+	}
+
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: *kubeconfig},
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: cfgPath},
 		&clientcmd.ConfigOverrides{
-			CurrentContext: *currentContext,
+			CurrentContext: cfgContext,
 		}).ClientConfig()
 }
 
