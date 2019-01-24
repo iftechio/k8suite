@@ -11,6 +11,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var (
+	home = homeDir()
+)
+
 func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
 		return h
@@ -24,7 +28,7 @@ func BuildConfigFromFlags() (*rest.Config, error) {
 		kubeconfig     *string
 		currentContext *string
 	)
-	if home := homeDir(); home != "" {
+	if home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
 		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
@@ -38,6 +42,10 @@ func BuildConfigFromFlags() (*rest.Config, error) {
 func BuildConfig(cfgPath, cfgContext string) (*rest.Config, error) {
 	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" && os.Getenv("KUBERNETES_SERVICE_PORT") != "" {
 		return rest.InClusterConfig()
+	}
+
+	if cfgPath == "" {
+		cfgPath = filepath.Join(home, ".kube", "config")
 	}
 
 	if cfgContext == "" {
